@@ -1,0 +1,76 @@
+@{
+    Layout = null;
+    var username = User.Identity.Name;  // Use the logged-in user's name
+       if (username == null)
+    {
+        <p>Username is null.</p>
+    }
+    else
+    {
+        <p>Username: @username</p>
+    }
+}
+
+@if (User.Identity.IsAuthenticated)
+{
+    <p>User is authenticated.</p>
+    <p>Username: @User.Identity.Name</p>
+}
+else
+{
+    <p>User is not authenticated.</p>
+}
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chatroom</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.9/signalr.min.js"></script>
+</head>
+<body>
+    <h2>Welcome to the chatroom, @username!</h2>
+    <input type="hidden" id="userInput" value="@username" />
+    <input type="text" id="messageInput" placeholder="Enter your message" />
+    <button id="sendButton">Send</button>
+    <ul id="messagesList"></ul>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chathub")
+                .build();
+
+            connection.start().then(function () {
+                console.log("Connected to SignalR");
+            }).catch(function (err) {
+                return console.error(err.toString());
+            });
+
+            connection.on("ReceiveMessage", function (user, message) {
+                const msg = user + ": " + message;
+                const li = document.createElement("li");
+                li.textContent = msg;
+                document.getElementById("messagesList").appendChild(li);
+            });
+
+            document.getElementById("sendButton").addEventListener("click", function (event) {
+                const user = document.getElementById("userInput").value;
+                const message = document.getElementById("messageInput").value;
+
+                if (message.trim() === "") {
+                    alert("Please enter a message");
+                    return;
+                }
+
+                connection.invoke("SendMessage", user, message).catch(function (err) {
+                    return console.error(err.toString());
+                });
+
+                document.getElementById("messageInput").value = ""; // Clear the message input box
+                event.preventDefault();
+            });
+        });
+    </script>
+</body>
+</html>
